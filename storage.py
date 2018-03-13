@@ -4,28 +4,35 @@ import argparse
 import json
 
 
-def storage_file_path():
-    return os.path.join(tempfile.gettempdir(), 'storage.data')
+storage_data_path = os.path.join(tempfile.gettempdir(), 'storage.data')
 
 
 def read_val(k):
-    with open(storage_file_path(), 'r') as f:
+    if not os.path.exists(storage_data_path):
+        return None
+
+    with open(storage_data_path, 'r') as f:
         content = f.read()
 
     return json.loads(content).get(k)
 
 
 def write_val(k, v):
-    with open(storage_file_path(), 'r+') as f:
-        d = json.loads(f.read())
-        old = d.get(k)
-        if old is None:
-            d[k] = v
-        else:
-            d[k] = f"{old}, {v}"
+    if not os.path.exists(storage_data_path):
+        with open(storage_data_path, 'w') as f:
+            f.write(json.dumps({k: v}))
+    
+    else:
+        with open(storage_data_path, 'r+') as f:
+            d = json.loads(f.read())
+            old = d.get(k)
+            if old is None:
+                d[k] = v
+            else:
+                d[k] = f"{old}, {v}"
 
-        f.seek(0)
-        f.write(json.dumps(d))
+            f.seek(0)
+            f.write(json.dumps(d))
 
 
 parser = argparse.ArgumentParser()
