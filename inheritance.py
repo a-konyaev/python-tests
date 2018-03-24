@@ -36,8 +36,39 @@ class ExDog(Dog, Loud):
         self.breed = "taksa"
 
 
+class PetExport:
+    def export(self, pet):
+        raise NotImplementedError
+
+
+class ExportJson(PetExport):
+    def export(self, pet):
+        pass
+
+
+class ExportXml(PetExport):
+    def export(self, pet):
+        return "<dog/>"
+
+
+class ExportDog(Dog):
+    def __init__(self, name, breed=None, exporter=None):
+        super().__init__(name, breed)
+        self._exporter = exporter or ExportJson()
+        if not isinstance(self._exporter, PetExport):
+            raise ValueError("wrong exporter", exporter)
+
+    def export(self):
+        return self._exporter.export(self)
+
+
 if __name__ == "__main__":
-    dog = LoudDog("Beethoven", "St. Bernard")
+    d = ExportDog("Барбос", "Ягдтерьер", exporter=ExportXml())
+    print(d.export())
+
+    print(issubclass(Dog, object))
+
+    #dog = LoudDog("Beethoven", "St. Bernard")
     #print(dog.say())
     #print(dog.say_loud())
 
@@ -50,5 +81,5 @@ if __name__ == "__main__":
     #ex = ExDog("Zhuchka")
     #print(ex.say_loud())
 
-    print(dog.__dict__)
+    #print(dog.__dict__)
     #dog.print_weight()
