@@ -26,6 +26,6 @@ if pid == 0:
         time.sleep(3)
 else:
     # parent process
-    print("parent pid = ", os.getpid())
+    print(f"parent pid = {os.getpid()}, fork = {pid}")
     os.wait()
 

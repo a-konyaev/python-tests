@@ -25,6 +25,8 @@ class File:
     def __str__(self):
         return self.filepath
 
+    # методы __iter__ и __next__ используются для того, чтобы "превратить" класс в итератор.
+    # альтернатива итераторам - генераторы, в которых для цели генерации последовательности используется yield
     def __iter__(self):
         self.file_for_iter = open(self.filepath, 'r')
         return self
