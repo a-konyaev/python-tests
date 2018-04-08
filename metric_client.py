@@ -58,22 +58,18 @@ class Client:
     def put(self, key, value, timestamp=None):
         try:
             print(f"put: {key}; {value}; timeout={timestamp}")
-            command = self._create_put_command(key, value, timestamp)
+            ts = str(int(time.time())) if timestamp is None else timestamp
+            command = f"put {key} {float(value)} {ts}"
             answer = self._send(command)
             print("put answer: ", answer)
         except Exception as ex:
             print("put error: ", ex)
             raise ClientError("put failed") from ex
 
-    @staticmethod
-    def _create_put_command(key, value, timestamp=None):
-        timestamp = str(int(time.time())) if timestamp is None else timestamp
-        return f"put {key} {float(value)} {timestamp}"
-
     def get(self, key):
         try:
             print(f"get: {key}")
-            command = self._create_get_command(key)
+            command = f"get {key}"
             answer = self._send(command)
             print("get answer: ", answer)
             res = self._parse_get_answer(answer)
@@ -82,15 +78,7 @@ class Client:
             print("get error: ", ex)
             raise ClientError("get failed") from ex
 
-    @staticmethod
-    def _create_get_command(key):
-        return f"get {key}"
-
-    def getKey(item):
-        return item[0]
-
-    @staticmethod
-    def _parse_get_answer(answer):
+    def _parse_get_answer(self, answer):
         if answer.startswith('error'):
             err_msg = answer.split('\n')[1]
             raise ClientError("server return error: ", err_msg)
@@ -120,20 +108,3 @@ class Client:
                 res[key] = sorted(l, key=lambda pair: pair[0])
 
         return res
-
-
-# if __name__ == "__main__":
-#     try:
-#         client = Client("127.0.0.1", 8888, timeout=5)
-#
-#         client.put("palm.cpu", 0.5, timestamp=1150864247)
-#         client.put("palm.cpu", 2.0, timestamp=1150864248)
-#         client.put("palm.cpu", 0.5, timestamp=1150864248)
-#
-#         client.put("eardrum.cpu", 3, timestamp=1150864250)
-#         client.put("eardrum.cpu", 4, timestamp=1150864251)
-#         client.put("eardrum.memory", 4200000)
-#
-#         print(client.get("*"))
-#     except Exception as err:
-#         print('\n', err)
