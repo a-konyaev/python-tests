@@ -82,6 +82,9 @@ class ServerSocket:
         """ignore socket.connect, soket.bind, etc..."""
         pass
 
+    def close(self):
+        pass
+
 
 class TestClient(unittest.TestCase):
     @classmethod

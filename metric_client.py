@@ -13,30 +13,24 @@ class Client:
         self.host = host
         self.port = port
         self.timeout = timeout
-        print(f"init: {host}:{port}; timeout={self.timeout}")
+        #print(f"init: {host}:{port}; timeout={self.timeout}")
         self._init_connection()
 
-    def __del__(self):
-        self._close_connection()
-        print("destructed")
+    # def __del__(self):
+    #     if self.sock:
+    #         self.sock.close()
 
     def _init_connection(self):
         try:
             self.sock = None
-            print("connecting to server...", end='')
+            #print("connecting to server...", end='')
             self.sock = socket.create_connection((self.host, self.port), self.timeout)
-            print("done")
+            #print("done")
         except Exception as ex:
             raise ClientError(f"cannot connect to server: {ex}") from ex
 
-    def _close_connection(self):
-        if self.sock:
-            print("connection closing...", end='')
-            self.sock.close()
-            print("done")
-
     def _send(self, command):
-        print(f"sending: {command}")
+        #print(f"sending: {command}")
         self.sock.sendall((command + '\n').encode())
 
         answer = ''
@@ -57,12 +51,12 @@ class Client:
 
     def put(self, key, value, timestamp=None):
         try:
-            print(f"put: {key}; {value}; timeout={timestamp}")
+            #print(f"put: {key}; {value}; timeout={timestamp}")
             command = self._create_put_command(key, value, timestamp)
             answer = self._send(command)
-            print("put answer: ", answer)
+            #print("put answer: ", answer)
         except Exception as ex:
-            print("put error: ", ex)
+            #print("put error: ", ex)
             raise ClientError("put failed") from ex
 
     @staticmethod
@@ -72,14 +66,14 @@ class Client:
 
     def get(self, key):
         try:
-            print(f"get: {key}")
+            #print(f"get: {key}")
             command = self._create_get_command(key)
             answer = self._send(command)
-            print("get answer: ", answer)
+            #print("get answer: ", answer)
             res = self._parse_get_answer(answer)
             return res
         except Exception as ex:
-            print("get error: ", ex)
+            #print("get error: ", ex)
             raise ClientError("get failed") from ex
 
     @staticmethod
@@ -120,20 +114,3 @@ class Client:
                 res[key] = sorted(l, key=lambda pair: pair[0])
 
         return res
-
-
-# if __name__ == "__main__":
-#     try:
-#         client = Client("127.0.0.1", 8888, timeout=5)
-#
-#         client.put("palm.cpu", 0.5, timestamp=1150864247)
-#         client.put("palm.cpu", 2.0, timestamp=1150864248)
-#         client.put("palm.cpu", 0.5, timestamp=1150864248)
-#
-#         client.put("eardrum.cpu", 3, timestamp=1150864250)
-#         client.put("eardrum.cpu", 4, timestamp=1150864251)
-#         client.put("eardrum.memory", 4200000)
-#
-#         print(client.get("*"))
-#     except Exception as err:
-#         print('\n', err)
