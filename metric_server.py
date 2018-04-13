@@ -18,12 +18,16 @@
 При нарушении формата сервер возвращает ошибку:
     error\nwrong command\n\n
 """
-import threading
 import asyncio
 import re
+import time
+
 
 match_put = re.compile('^put (\S+) (\S+)( (\d+))?$')
 match_get = re.compile('^get (\S+|\*)$')
+
+answer_ok = "ok\n\n"
+metric_dict = {}
 
 
 class ClientServerProtocol(asyncio.Protocol):
@@ -40,17 +44,74 @@ class ClientServerProtocol(asyncio.Protocol):
 
     @staticmethod
     def _process_data(data):
-        m = match_put.match(data)
-        if m:
-            print(f'match put: key=[{m.group(1)}]; value=[{m.group(2)}]; ts=[{m.group(4)}]')
-            return "ok\n\n"
+        try:
+            m = match_put.match(data)
+            if m:
+                key = m.group(1)
+                value = float(m.group(2))
+                ts = m.group(4)
+                ts = int(time.time()) if ts is None else int(ts)
+                res = ClientServerProtocol._process_put(key, value, ts)
+                return res
 
-        m = match_get.match(data)
-        if m:
-            print(f'match get: key=[{m.group(1)}]')
-            return "ok\n\n"
+            m = match_get.match(data)
+            if m:
+                res = ClientServerProtocol._process_get(m.group(1))
+                return res
 
-        return ClientServerProtocol._get_error("wrong command")
+            return ClientServerProtocol._get_error("wrong command")
+
+        except Exception as ex:
+            return ClientServerProtocol._get_error("process data failed: ", ex)
+
+    @staticmethod
+    def _process_put(key, value, ts):
+        print(f'put: key=[{key}]; value=[{value}]; ts=[{ts}]')
+
+        if key not in metric_dict:
+            metric_dict[key] = [(ts, value)]
+        else:
+            value_list = metric_dict[key]
+            value_list = ClientServerProtocol._append_value_in_list(value_list, value, ts)
+            metric_dict[key] = value_list
+
+        print("metric_dict updated: ", metric_dict)
+
+        return answer_ok
+
+    @staticmethod
+    def _append_value_in_list(value_list, value, ts):
+        for index, item in enumerate(value_list):
+            if item[0] == ts:
+                value_list[index] = (ts, value)
+                return value_list
+
+        value_list.append((ts, value))
+        return sorted(value_list, key=lambda pair: pair[0])
+
+    @staticmethod
+    def _process_get(key):
+        print(f'get: key=[{key}]')
+        answer = 'ok\n'
+
+        if key == '*':
+            for item_key, value_list in metric_dict.items():
+                answer += ClientServerProtocol._value_list_to_text(item_key, value_list)
+
+        elif key in metric_dict:
+            value_list = metric_dict[key]
+            answer += ClientServerProtocol._value_list_to_text(key, value_list)
+
+        return answer + '\n'
+
+    @staticmethod
+    def _value_list_to_text(key, value_list):
+        res = ''
+        for pair in value_list:
+            val = pair[1]
+            ts = pair[0]
+            res += f"{key} {val} {ts}\n"
+        return res
 
     @staticmethod
     def _get_error(msg):
@@ -76,5 +137,5 @@ def run_server(host, port):
     print("server stopped")
 
 
-if __name__ == "__main__":
-    run_server("127.0.0.1", 8888)
+# if __name__ == "__main__":
+#     run_server("127.0.0.1", 8888)

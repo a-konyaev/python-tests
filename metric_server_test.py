@@ -33,18 +33,18 @@ def run(host, port):
 
     try:
         client1.put("k1", 0.25, timestamp=1)
-        client2.put("k1", 2.156, timestamp=2)
         client1.put("k1", 0.35, timestamp=3)
+        client2.put("k1", 2.156, timestamp=2)
         client2.put("k2", 30, timestamp=4)
         client1.put("k2", 40, timestamp=5)
-        client1.put("k2", 40, timestamp=5)
+        client1.put("k2", 41, timestamp=5)
     except Exception as err:
         print(f"Ошибка вызова client.put(...) {err.__class__}: {err}")
         sys.exit(1)
 
     expected_metrics = {
         "k1": [(1, 0.25), (2, 2.156), (3, 0.35)],
-        "k2": [(4, 30.0), (5, 40.0)],
+        "k2": [(4, 30.0), (5, 41.0)],
     }
 
     try:
@@ -56,7 +56,7 @@ def run(host, port):
         print(f"Ошибка вызова client.get('*') {err.__class__}: {err}")
         sys.exit(1)
 
-    expected_metrics = {"k2": [(4, 30.0), (5, 40.0)]}
+    expected_metrics = {"k2": [(4, 30.0), (5, 41.0)]}
 
     try:
         metrics = client2.get("k2")
