@@ -5,6 +5,7 @@ import random
 import math
 import os
 import multiprocessing
+import concurrent.futures
 
 
 folder = r'c:\.my\1'
@@ -18,6 +19,7 @@ symbols = [chr(i) for i in range(ord('a'), ord('z') + 1)] + \
 # [chr(i) for i in range(ord('А'), ord('Я')+1)]
 # [chr(i) for i in range(ord('0'), ord('9')+1)]
 pwd_len = 6
+# stop_event = multiprocessing.Event()
 
 
 def get_shuffle_symbol_list():
@@ -36,7 +38,7 @@ def check_pwd(zip_file, pwd):
         return False
 
 
-def sort_out_pwd(zip_file, pwd_first_part, check_pwd_func, stop_ev):
+def sort_out_pwd(zip_file, pwd_first_part, check_pwd_func):
     print(f"start process: pid={os.getpid()}")
 
     for second_part_tuple in product(symbols, repeat=pwd_len - 1):
@@ -45,11 +47,11 @@ def sort_out_pwd(zip_file, pwd_first_part, check_pwd_func, stop_ev):
         is_valid = check_pwd_func(zip_file, pwd)
         if is_valid:
             print('Password found: ', pwd)
-            stop_ev.set()
+            # stop_event.set()
             return pwd
 
-        if stop_event.is_set():
-            return None
+        # if stop_event.is_set():
+        #     return None
 
     return None
 
@@ -60,19 +62,25 @@ if __name__ == '__main__':
     shuffle_symbols = get_shuffle_symbol_list()
 
     results = []
-    stop_event = multiprocessing.Event()
 
     zf = ZipFile(zip_file_path)
     first_zip_item = zf.namelist()[0]
 
-    pp = multiprocessing.Pool(processes=1)
-    results = [pp.apply_async(sort_out_pwd, (zf, first_symbol, check_pwd, stop_event))
-               for first_symbol in shuffle_symbols]
+    # pp = multiprocessing.Pool(processes=1)
+    # results = [pp.apply_async(sort_out_pwd, (zf, first_symbol, check_pwd, stop_event))
+    #            for first_symbol in shuffle_symbols]
+    #
+    # stop_event.wait()
+    #
+    # pp.close()
+    # pp.join()
 
-    stop_event.wait()
+    executor = concurrent.futures.ProcessPoolExecutor(max_workers=1)
+    futures = [
+        executor.submit(sort_out_pwd, zf, first_symbol, check_pwd)
+        for first_symbol in shuffle_symbols
+    ]
 
-    pp.close()
-    pp.join()
     zf.close()
 
     time_elapsed = time.time() - time_start
@@ -82,3 +90,6 @@ if __name__ == '__main__':
     #     print("!!! password found: ", pwd_founded)
     # else:
     #     print("password now found :(")
+
+
+# !!! делать через форк-и
