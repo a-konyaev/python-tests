@@ -29,6 +29,7 @@ class ZipArch:
 class PasswordGenerator:
     symbols = [chr(i) for i in range(ord('a'), ord('z') + 1)] + \
               [chr(i) for i in range(ord('A'), ord('Z') + 1)]
+
     # [chr(i) for i in range(ord('а'), ord('я')+1)] +\
     # [chr(i) for i in range(ord('А'), ord('Я')+1)]
     # [chr(i) for i in range(ord('0'), ord('9')+1)]
@@ -54,15 +55,19 @@ class PasswordGenerator:
 stop_event = multiprocessing.Event()
 
 
-def run_single_process(folder, file_name, pwd_len, pwd_first_symbol=None):
+def run_single_process(folder, file_name, pwd_len, pwd_first_symbol, pwd_proxy):
+    pid = os.getpid()
+
     za = ZipArch(folder, file_name)
     pg = PasswordGenerator(pwd_len)
 
     for pwd in pg.go_over_passwords(pwd_first_symbol):
-        print(pwd)
+        # print(pid, pwd)
+
         is_valid = za.check_pwd(pwd)
         if is_valid:
             stop_event.set()
+            pwd_proxy.value = pwd
             return pwd
 
         if stop_event.is_set():
@@ -71,39 +76,55 @@ def run_single_process(folder, file_name, pwd_len, pwd_first_symbol=None):
     return
 
 
-def run_multi_process(folder, file_name, pwd_len):
+def run_multi_process(folder, file_name, pwd_len, process_count):
     manager = multiprocessing.Manager()
-    manager.Value('password', '')
+    pwd_proxy = manager.Value('password', '')
+    # check_count = manager.Value('check_count', 0, lock=True)
 
-    shuffled_symbols = PasswordGenerator.get_shuffled_symbols()
+    # first_symbols = PasswordGenerator.get_shuffled_symbols()
+    first_symbols = PasswordGenerator.symbols
 
-    pool = multiprocessing.Pool(processes=4)
-    results = [pool.apply_async(run_single_process, (folder, file_name, pwd_len, first_symbol))
-               for first_symbol in shuffled_symbols]
-    pool.close()
-    pool.join()
+    # pool = multiprocessing.Pool(processes=process_count)
+
+    # for first_symbol in first_symbols:
+    #     pool.apply_async(run_single_process, (folder, file_name, pwd_len, first_symbol, pwd_proxy))
+
+    index = 0
+    while True:
+        chunk = first_symbols[index:index + process_count]
+        if len(chunk) == 0:
+            break
+
+        print('process: ', chunk)
+        index += process_count
+
+        processes = [multiprocessing.Process(
+            target=run_single_process,
+            args=(folder, file_name, pwd_len, first_symbol, pwd_proxy,))
+            for first_symbol in chunk]
+
+        for p in processes:
+            p.start()
+
+        for p in processes:
+            p.join()
 
 
-def run_fork():
-    pid = os.fork()
-    if pid == 0:
-        # child process
-        while True:
-            print(f"child pid = {os.getpid()}; time = {time.time()}");
-            time.sleep(3)
-    else:
-        # parent process
-        print(f"parent pid = {os.getpid()}, fork = {pid}")
-        os.wait()
+    # pool.close()
+    # pool.join()
+
+    return pwd_proxy.value
 
 
 def main():
     folder = r'c:\.my\1'
-    file_name = 'test3.zip'
+    pwd_len = 6
+    # file_name = f'test{pwd_len}.zip'
+    file_name = 't.zip'
+
     time_start = time.time()
 
-    # found_password = run_single_process(folder, file_name, 3)
-    found_password = run_multi_process(folder, file_name, 3)
+    found_password = run_multi_process(folder, file_name, pwd_len, process_count=8)
 
     print('password = ', found_password)
     print(f"time elapsed: {int(time.time() - time_start)} sec")
